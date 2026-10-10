@@ -1,0 +1,17 @@
+# JUCE / Projucer generated files
+JuceLibraryCode/
+
+# Xcode generated files
+Builds/
+DerivedData/
+*.xcuserstate
+.DS_Store
+
+# Compiled plugins
+*.vst3/
+*.component/
+*.aaxplugin/
+
+# Temporary files
+*.log
+*.tmp
