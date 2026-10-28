@@ -1,11 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="pOBMGY" name="BasicGain" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginFormats="buildAU,buildStandalone,buildVST3">
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
   <MAINGROUP id="y1X7H0" name="BasicGain">
     <GROUP id="{AE21EFC9-9992-E802-FC2F-BC608991F9A2}" name="Source">
       <FILE id="gF9PVU" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
+      <FILE id="nlKUI0" name="Ribes-Black.otf" compile="0" resource="1" file="Source/fonts/Ribes-Black.otf"/>
+      <FILE id="tL3YdX" name="Ribes-Black.woff" compile="0" resource="1"
+            file="Source/fonts/Ribes-Black.woff"/>
+      <FILE id="Ab7i3c" name="Ribes-Black.woff2" compile="0" resource="1"
+            file="Source/fonts/Ribes-Black.woff2"/>
+      <FILE id="PzIbom" name="Ribes-Light.otf" compile="0" resource="1" file="Source/fonts/Ribes-Light.otf"/>
+      <FILE id="xyxoR0" name="Ribes-Light.woff" compile="0" resource="1"
+            file="Source/fonts/Ribes-Light.woff"/>
+      <FILE id="X8PDk5" name="Ribes-Light.woff2" compile="0" resource="1"
+            file="Source/fonts/Ribes-Light.woff2"/>
+      <FILE id="MpL9xv" name="Ribes-Regular.otf" compile="0" resource="1"
+            file="Source/fonts/Ribes-Regular.otf"/>
+      <FILE id="GlEjhU" name="Ribes-Regular.woff" compile="0" resource="1"
+            file="Source/fonts/Ribes-Regular.woff"/>
+      <FILE id="DcgA8s" name="Ribes-Regular.woff2" compile="0" resource="1"
+            file="Source/fonts/Ribes-Regular.woff2"/>
       <FILE id="fLXCDG" name="PluginProcessor.h" compile="0" resource="0"
             file="Source/PluginProcessor.h"/>
       <FILE id="GR8179" name="PluginEditor.cpp" compile="1" resource="0"

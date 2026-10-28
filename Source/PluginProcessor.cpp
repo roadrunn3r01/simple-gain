@@ -1,7 +1,8 @@
 /*
   ==============================================================================
 
-    This file contains the basic framework code for a JUCE plugin processor.
+    PluginProcessor.cpp
+    BasicGain - Audio Gain Plugin
 
   ==============================================================================
 */
@@ -10,23 +11,7 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-
-juce::AudioProcessorValueTreeState::ParameterLayout
-BasicGainAudioProcessor::createParameterLayout()
-{
-    juce::AudioProcessorValueTreeState::ParameterLayout layout;
-
-    layout.add (std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "GAIN", 1 },
-        "Gain",
-        juce::NormalisableRange<float> (-60.0f, 12.0f, 0.1f),
-        0.0f
-    ));
-
-    return layout;
-}
-
-
+// CONSTRUCTOR
 
 BasicGainAudioProcessor::BasicGainAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -37,8 +22,8 @@ BasicGainAudioProcessor::BasicGainAudioProcessor()
             #endif
                 .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
         #endif
-      ),
-      apvts (*this, nullptr, "Parameters", createParameterLayout())
+    ),
+    apvts (*this, nullptr, "Parameters", createParameterLayout())
 #else
     : apvts (*this, nullptr, "Parameters", createParameterLayout())
 #endif
@@ -50,6 +35,8 @@ BasicGainAudioProcessor::~BasicGainAudioProcessor()
 }
 
 //==============================================================================
+// PLUGIN INFORMATION
+
 const juce::String BasicGainAudioProcessor::getName() const
 {
     return JucePlugin_Name;
@@ -57,29 +44,29 @@ const juce::String BasicGainAudioProcessor::getName() const
 
 bool BasicGainAudioProcessor::acceptsMidi() const
 {
-   #if JucePlugin_WantsMidiInput
-    return true;
-   #else
-    return false;
-   #endif
+    #if JucePlugin_WantsMidiInput
+        return true;
+    #else
+        return false;
+    #endif
 }
 
 bool BasicGainAudioProcessor::producesMidi() const
 {
-   #if JucePlugin_ProducesMidiOutput
-    return true;
-   #else
-    return false;
-   #endif
+    #if JucePlugin_ProducesMidiOutput
+        return true;
+    #else
+        return false;
+    #endif
 }
 
 bool BasicGainAudioProcessor::isMidiEffect() const
 {
-   #if JucePlugin_IsMidiEffect
-    return true;
-   #else
-    return false;
-   #endif
+    #if JucePlugin_IsMidiEffect
+        return true;
+    #else
+        return false;
+    #endif
 }
 
 double BasicGainAudioProcessor::getTailLengthSeconds() const
@@ -87,10 +74,12 @@ double BasicGainAudioProcessor::getTailLengthSeconds() const
     return 0.0;
 }
 
+//==============================================================================
+// PROGRAMS
+
 int BasicGainAudioProcessor::getNumPrograms()
 {
-    return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
-                // so this should be at least 1, even if you're not really implementing programs.
+    return 1;
 }
 
 int BasicGainAudioProcessor::getCurrentProgram()
@@ -100,116 +89,233 @@ int BasicGainAudioProcessor::getCurrentProgram()
 
 void BasicGainAudioProcessor::setCurrentProgram (int index)
 {
+    juce::ignoreUnused (index);
 }
 
 const juce::String BasicGainAudioProcessor::getProgramName (int index)
 {
+    juce::ignoreUnused (index);
     return {};
 }
 
-void BasicGainAudioProcessor::changeProgramName (int index, const juce::String& newName)
+void BasicGainAudioProcessor::changeProgramName (
+    int index,
+    const juce::String& newName)
 {
+    juce::ignoreUnused (index, newName);
 }
 
 //==============================================================================
-void BasicGainAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+// AUDIO INITIALIZATION
+
+void BasicGainAudioProcessor::prepareToPlay (
+    double sampleRate,
+    int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
+    juce::ignoreUnused (samplesPerBlock);
+
+    // Smooth gain changes over 20 milliseconds.
+    smoothedGain.reset (sampleRate, 0.02);
+
+    // Read the current gain parameter in decibels.
+    const float gainDB =
+        apvts.getRawParameterValue ("gain")->load();
+
+    // Convert decibels to linear amplitude.
+    const float gainLinear =
+        juce::Decibels::decibelsToGain (gainDB, -60.0f);
+
+    // Initialize the gain without a transition.
+    smoothedGain.setCurrentAndTargetValue (gainLinear);
 }
 
 void BasicGainAudioProcessor::releaseResources()
 {
-    // When playback stops, you can use this as an opportunity to free up any
-    // spare memory, etc.
 }
+
+//==============================================================================
+// CHANNEL CONFIGURATION
 
 #ifndef JucePlugin_PreferredChannelConfigurations
-bool BasicGainAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+
+bool BasicGainAudioProcessor::isBusesLayoutSupported (
+    const BusesLayout& layouts) const
 {
-  #if JucePlugin_IsMidiEffect
-    juce::ignoreUnused (layouts);
-    return true;
-  #else
-    // This is the place where you check if the layout is supported.
-    // In this template code we only support mono or stereo.
-    // Some plugin hosts, such as certain GarageBand versions, will only
-    // load plugins that support stereo bus layouts.
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
-     && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
-        return false;
+    #if JucePlugin_IsMidiEffect
 
-    // This checks if the input layout matches the output layout
-   #if ! JucePlugin_IsSynth
-    if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
-        return false;
-   #endif
+        juce::ignoreUnused (layouts);
+        return true;
 
-    return true;
-  #endif
+    #else
+
+        // Support mono and stereo output.
+        if (layouts.getMainOutputChannelSet() !=
+                juce::AudioChannelSet::mono()
+            &&
+            layouts.getMainOutputChannelSet() !=
+                juce::AudioChannelSet::stereo())
+        {
+            return false;
+        }
+
+        // Input and output must have the same layout.
+        #if ! JucePlugin_IsSynth
+            if (layouts.getMainOutputChannelSet() !=
+                layouts.getMainInputChannelSet())
+            {
+                return false;
+            }
+        #endif
+
+        return true;
+
+    #endif
 }
+
 #endif
 
+//==============================================================================
+// AUDIO PROCESSING
 
-void BasicGainAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
-                                            juce::MidiBuffer& midiMessages)
+void BasicGainAudioProcessor::processBlock (
+    juce::AudioBuffer<float>& buffer,
+    juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
 
-    auto totalNumInputChannels  = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
+    juce::ignoreUnused (midiMessages);
 
-    // Limpiar canales de salida sin entrada
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+    const int totalNumInputChannels =
+        getTotalNumInputChannels();
 
-    // Leer el valor del parámetro GAIN en decibelios
-    auto gainDb = apvts.getRawParameterValue ("GAIN")->load();
+    const int totalNumOutputChannels =
+        getTotalNumOutputChannels();
 
-    // Convertir decibelios a ganancia lineal
-    auto gainLinear = juce::Decibels::decibelsToGain (gainDb);
+    const int numSamples = buffer.getNumSamples();
 
-    // Aplicar ganancia a cada muestra de cada canal
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
+    // Clear output channels without corresponding input.
+    for (int channel = totalNumInputChannels;
+         channel < totalNumOutputChannels;
+         ++channel)
     {
-        auto* channelData = buffer.getWritePointer (channel);
+        buffer.clear (channel, 0, numSamples);
+    }
 
-        for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
+    // Read gain in dB.
+    const float gainDB =
+        apvts.getRawParameterValue ("gain")->load();
+
+    // Convert dB to linear amplitude.
+    const float gainLinear =
+        juce::Decibels::decibelsToGain (gainDB, -60.0f);
+
+    // Set the new target gain.
+    smoothedGain.setTargetValue (gainLinear);
+
+    // Process every audio sample.
+    for (int sample = 0; sample < numSamples; ++sample)
+    {
+        // Get the next smoothed gain value.
+        const float currentGain =
+            smoothedGain.getNextValue();
+
+        // Apply the same gain to every input channel.
+        for (int channel = 0;
+             channel < totalNumInputChannels;
+             ++channel)
         {
-            channelData[sample] *= gainLinear;
+            float* channelData =
+                buffer.getWritePointer (channel);
+
+            channelData[sample] *= currentGain;
         }
     }
 }
 
-
-
 //==============================================================================
-bool BasicGainAudioProcessor::hasEditor() const
+// PARAMETER LAYOUT
+
+juce::AudioProcessorValueTreeState::ParameterLayout
+BasicGainAudioProcessor::createParameterLayout()
 {
-    return true; // (change this to false if you choose to not supply an editor)
+    juce::AudioProcessorValueTreeState::ParameterLayout layout;
+
+    // Gain parameter: -60 dB to +12 dB.
+    // Default value: 0 dB.
+    // Step size: 0.1 dB.
+
+    layout.add (
+        std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID { "gain", 1 },
+            "Gain",
+            juce::NormalisableRange<float>(
+                -60.0f,
+                12.0f,
+                0.1f
+            ),
+            0.0f,
+            juce::AudioParameterFloatAttributes()
+                .withLabel ("dB")
+        )
+    );
+
+    return layout;
 }
 
-juce::AudioProcessorEditor* BasicGainAudioProcessor::createEditor()
+//==============================================================================
+// EDITOR
+
+bool BasicGainAudioProcessor::hasEditor() const
+{
+    return true;
+}
+
+juce::AudioProcessorEditor*
+BasicGainAudioProcessor::createEditor()
 {
     return new BasicGainAudioProcessorEditor (*this);
 }
 
 //==============================================================================
-void BasicGainAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+// SAVE AND RESTORE PLUGIN STATE
+
+void BasicGainAudioProcessor::getStateInformation (
+    juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
+    // Copy the current parameter state.
+    auto state = apvts.copyState();
+
+    // Convert the state to XML.
+    std::unique_ptr<juce::XmlElement> xml (
+        state.createXml()
+    );
+
+    // Save the XML as binary data.
+    copyXmlToBinary (*xml, destData);
 }
 
-void BasicGainAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+void BasicGainAudioProcessor::setStateInformation (
+    const void* data,
+    int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
+    // Read XML from binary data.
+    std::unique_ptr<juce::XmlElement> xml (
+        getXmlFromBinary (data, sizeInBytes)
+    );
+
+    // Restore saved parameters.
+    if (xml != nullptr &&
+        xml->hasTagName (apvts.state.getType()))
+    {
+        apvts.replaceState (
+            juce::ValueTree::fromXml (*xml)
+        );
+    }
 }
 
 //==============================================================================
-// This creates new instances of the plugin..
+// PLUGIN INSTANCE
+
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new BasicGainAudioProcessor();
