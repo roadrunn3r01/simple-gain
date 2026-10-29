@@ -10,7 +10,6 @@ The project is intentionally simple. Its purpose is to establish a solid foundat
 
 ## Interface
 
-![BasicGain plugin interface](Assets/basicgain-interface.png)
 
 The interface features a custom vertical fader, a live decibel readout, and Ribes typography. I designed it around a minimal visual language, combining functionality with a distinct graphic identity.
 
